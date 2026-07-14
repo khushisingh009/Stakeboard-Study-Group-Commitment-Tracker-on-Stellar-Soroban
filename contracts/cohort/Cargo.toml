@@ -1,0 +1,18 @@
+[package]
+name = "study-cohort"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "21.7.4"
+
+[dev-dependencies]
+soroban-sdk = { version = "21.7.4", features = ["testutils"] }
+attendance-log = { path = "../attendance" }
+
+[features]
+testutils = ["soroban-sdk/testutils"]
