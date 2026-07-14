@@ -1,0 +1,27 @@
+# Rust / Soroban
+/target
+Cargo.lock
+**/*.rs.bk
+
+# Node
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Env
+.env
+.env.local
+frontend/.env
+frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Stellar CLI
+.stellar
