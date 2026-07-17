@@ -52,7 +52,7 @@ export default function App() {
     setJoinLoading(true);
     try {
       const { hash } = await cohortClient.joinCohort(cohortId, wallet.address, wallet.signTransaction);
-      setSuccess(`Joined the cohort and posted stake. Transaction: ${hash}`);
+      setSuccess({ text: 'Joined the cohort and posted stake.', hash });
       await wallet.fetchBalance();
       await handleLookup(cohortId);
     } catch (err) {
@@ -80,7 +80,7 @@ export default function App() {
         maxMisses,
         wallet.signTransaction
       );
-      setSuccess(`Cohort created on-chain. Transaction: ${hash}`);
+      setSuccess({ text: 'Cohort created on-chain.', hash });
       await wallet.fetchBalance();
       setView('cohort');
     } catch (err) {
@@ -99,7 +99,7 @@ export default function App() {
     setActionLoading(true);
     try {
       const { hash } = await cohortClient.closeMilestone(currentCohortId, milestoneIndex, wallet.address, wallet.signTransaction);
-      setSuccess(`Session closed and attendance checked. Transaction: ${hash}`);
+      setSuccess({ text: 'Session closed and attendance checked.', hash });
       await wallet.fetchBalance();
       await handleLookup(currentCohortId);
     } catch (err) {
@@ -115,7 +115,7 @@ export default function App() {
     setActionLoading(true);
     try {
       const { hash } = await cohortClient.finalizeCohort(currentCohortId, wallet.address, wallet.signTransaction);
-      setSuccess(`Cohort finalized — stakes distributed. Transaction: ${hash}`);
+      setSuccess({ text: 'Cohort finalized — stakes distributed.', hash });
       await wallet.fetchBalance();
       await handleLookup(currentCohortId);
     } catch (err) {
@@ -134,7 +134,7 @@ export default function App() {
     setCheckingIn(true);
     try {
       const { hash } = await attendanceClient.checkIn(cohortId, milestoneIndex, wallet.address, wallet.signTransaction);
-      setSuccess(`Checked in for session ${milestoneIndex}. Transaction: ${hash}`);
+      setSuccess({ text: `Checked in for session ${milestoneIndex}.`, hash });
       await wallet.fetchBalance();
     } catch (err) {
       setError(`Check-in failed: ${err.message}`);
@@ -150,7 +150,26 @@ export default function App() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 space-y-6">
         {(error || wallet.error) && <Banner type="error" message={error || wallet.error} onDismiss={() => setError(null)} />}
-        {success && <Banner type="success" message={success} onDismiss={() => setSuccess(null)} />}
+        {success && (
+          <Banner
+            type="success"
+            message={
+              <span>
+                {success.text}{' '}
+                Transaction:{' '}
+                <a
+                  href={`https://stellar.expert/explorer/testnet/tx/${success.hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#fbbf24', textDecoration: 'underline', fontFamily: 'monospace', fontSize: '0.85em' }}
+                >
+                  {success.hash.slice(0, 8)}…{success.hash.slice(-8)}
+                </a>
+              </span>
+            }
+            onDismiss={() => setSuccess(null)}
+          />
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
