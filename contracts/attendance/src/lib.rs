@@ -10,7 +10,7 @@
 
 #![no_std]
 
-use soroban_sdk::{contract, contracterror, contractevent, contractimpl, contracttype, Address, Env, Vec};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Vec};
 
 #[contracttype]
 pub enum DataKey {
@@ -27,15 +27,7 @@ pub enum AttendanceError {
     AlreadyCheckedIn = 3,
 }
 
-#[contractevent]
-#[derive(Clone, Debug)]
-pub struct CheckedIn {
-    #[topic]
-    pub cohort_id: u64,
-    #[topic]
-    pub milestone_index: u32,
-    pub member: Address,
-}
+
 
 #[contract]
 pub struct AttendanceLogContract;
@@ -67,7 +59,7 @@ impl AttendanceLogContract {
         let count = attendees.len();
         env.storage().persistent().set(&key, &attendees);
 
-        CheckedIn { cohort_id, milestone_index, member }.publish(&env);
+        env.events().publish((symbol_short!("check_in"), cohort_id, milestone_index), member.clone());
         Ok(count)
     }
 
