@@ -9,10 +9,10 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 soroban-sdk = "21.7.4"
+attendance-log = { path = "../attendance" }
 
 [dev-dependencies]
 soroban-sdk = { version = "21.7.4", features = ["testutils"] }
-attendance-log = { path = "../attendance" }
 
 [features]
 testutils = ["soroban-sdk/testutils"]
