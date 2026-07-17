@@ -53,6 +53,7 @@ export default function App() {
     try {
       const { hash } = await cohortClient.joinCohort(cohortId, wallet.address, wallet.signTransaction);
       setSuccess(`Joined the cohort and posted stake. Transaction: ${hash}`);
+      await wallet.fetchBalance();
       await handleLookup(cohortId);
     } catch (err) {
       setError(`Failed to join cohort: ${err.message}`);
@@ -80,6 +81,7 @@ export default function App() {
         wallet.signTransaction
       );
       setSuccess(`Cohort created on-chain. Transaction: ${hash}`);
+      await wallet.fetchBalance();
       setView('cohort');
     } catch (err) {
       setError(`Failed to create cohort: ${err.message}`);
@@ -98,6 +100,7 @@ export default function App() {
     try {
       const { hash } = await cohortClient.closeMilestone(currentCohortId, milestoneIndex, wallet.address, wallet.signTransaction);
       setSuccess(`Session closed and attendance checked. Transaction: ${hash}`);
+      await wallet.fetchBalance();
       await handleLookup(currentCohortId);
     } catch (err) {
       setError(`Could not close session: ${err.message}`);
@@ -113,6 +116,7 @@ export default function App() {
     try {
       const { hash } = await cohortClient.finalizeCohort(currentCohortId, wallet.address, wallet.signTransaction);
       setSuccess(`Cohort finalized — stakes distributed. Transaction: ${hash}`);
+      await wallet.fetchBalance();
       await handleLookup(currentCohortId);
     } catch (err) {
       setError(`Could not finalize cohort: ${err.message}`);
@@ -131,6 +135,7 @@ export default function App() {
     try {
       const { hash } = await attendanceClient.checkIn(cohortId, milestoneIndex, wallet.address, wallet.signTransaction);
       setSuccess(`Checked in for session ${milestoneIndex}. Transaction: ${hash}`);
+      await wallet.fetchBalance();
     } catch (err) {
       setError(`Check-in failed: ${err.message}`);
     } finally {

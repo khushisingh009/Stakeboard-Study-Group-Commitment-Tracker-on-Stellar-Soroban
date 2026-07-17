@@ -106,5 +106,16 @@ export class AttendanceClient extends BaseClient {
   }
 }
 
+export class TokenClient extends BaseClient {
+  constructor(contractId = CONTRACTS.STAKE_TOKEN_ID) {
+    super(contractId);
+  }
+
+  balance(id, sourceAddress) {
+    return this.view('balance', [nativeToScVal(id, { type: 'address' })], sourceAddress);
+  }
+}
+
 export const cohortClient = new CohortClient();
 export const attendanceClient = new AttendanceClient();
+export const tokenClient = new TokenClient();

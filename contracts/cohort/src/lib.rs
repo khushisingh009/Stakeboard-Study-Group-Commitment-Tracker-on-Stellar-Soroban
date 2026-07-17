@@ -10,11 +10,11 @@
 
 #![no_std]
 
-use soroban_sdk::{contract, contracterror, contractevent, contractimpl, contracttype, token, Address, Env, String, Vec};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, token, Address, Env, String, Vec};
 
 mod attendance {
     soroban_sdk::contractimport!(
-        file = "../attendance/target/wasm32-unknown-unknown/release/attendance_log.wasm"
+        file = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target/wasm32-unknown-unknown/release/attendance_log.wasm")
     );
 }
 
@@ -69,49 +69,6 @@ pub enum CohortError {
     InvalidMilestoneIndex = 8,
 }
 
-#[contractevent]
-#[derive(Clone, Debug)]
-pub struct CohortCreated {
-    #[topic]
-    pub cohort_id: u64,
-    pub organizer: Address,
-    pub stake_amount: i128,
-    pub milestone_count: u32,
-}
-
-#[contractevent]
-#[derive(Clone, Debug)]
-pub struct MemberJoined {
-    #[topic]
-    pub cohort_id: u64,
-    pub member: Address,
-}
-
-#[contractevent]
-#[derive(Clone, Debug)]
-pub struct MilestoneClosed {
-    #[topic]
-    pub cohort_id: u64,
-    pub milestone_index: u32,
-    pub attendee_count: u32,
-}
-
-#[contractevent]
-#[derive(Clone, Debug)]
-pub struct MemberDropped {
-    #[topic]
-    pub cohort_id: u64,
-    pub member: Address,
-}
-
-#[contractevent]
-#[derive(Clone, Debug)]
-pub struct CohortFinalized {
-    #[topic]
-    pub cohort_id: u64,
-    pub payout_per_finisher: i128,
-}
-
 #[contract]
 pub struct StudyCohortContract;
 
@@ -148,7 +105,10 @@ impl StudyCohortContract {
         };
         env.storage().persistent().set(&DataKey::Cohort(cohort_id), &cohort);
 
-        CohortCreated { cohort_id, organizer, stake_amount, milestone_count }.publish(&env);
+        env.events().publish(
+            (symbol_short!("cohort"), cohort_id),
+            (organizer, stake_amount, milestone_count),
+        );
         Ok(cohort_id)
     }
 
@@ -169,7 +129,10 @@ impl StudyCohortContract {
         cohort.members.push_back(Member { address: member.clone(), status: MemberStatus::Active, misses: 0 });
         env.storage().persistent().set(&DataKey::Cohort(cohort_id), &cohort);
 
-        MemberJoined { cohort_id, member }.publish(&env);
+        env.events().publish(
+            (symbol_short!("joined"), cohort_id),
+            member,
+        );
         Ok(())
     }
 
@@ -203,7 +166,10 @@ impl StudyCohortContract {
                     m.misses += 1;
                     if m.misses > cohort.max_misses {
                         m.status = MemberStatus::Dropped;
-                        MemberDropped { cohort_id, member: m.address.clone() }.publish(&env);
+                        env.events().publish(
+                            (symbol_short!("dropped"), cohort_id),
+                            m.address.clone(),
+                        );
                     }
                 }
             }
@@ -214,7 +180,10 @@ impl StudyCohortContract {
         env.storage().persistent().set(&closed_key, &true);
         env.storage().persistent().set(&DataKey::Cohort(cohort_id), &cohort);
 
-        MilestoneClosed { cohort_id, milestone_index, attendee_count }.publish(&env);
+        env.events().publish(
+            (symbol_short!("milestone"), cohort_id, milestone_index),
+            attendee_count,
+        );
         Ok(())
     }
 
@@ -231,25 +200,31 @@ impl StudyCohortContract {
             return Err(CohortError::AllMilestonesNotClosed);
         }
 
-        let finishers: Vec<Address> = cohort
-            .members
-            .iter()
-            .filter(|m| m.status == MemberStatus::Active)
-            .map(|m| m.address.clone())
-            .collect();
+        // soroban Vec does not implement FromIterator — build manually
+        let mut finishers: Vec<Address> = Vec::new(&env);
+        for i in 0..cohort.members.len() {
+            let m = cohort.members.get(i).unwrap();
+            if m.status == MemberStatus::Active {
+                finishers.push_back(m.address.clone());
+            }
+        }
 
         let total_pool = cohort.stake_amount * (cohort.members.len() as i128);
         let payout = if finishers.len() > 0 { total_pool / (finishers.len() as i128) } else { 0 };
 
         let token_client = token::Client::new(&env, &cohort.stake_token);
-        for addr in finishers.iter() {
-            token_client.transfer(&env.current_contract_address(), addr, &payout);
+        for i in 0..finishers.len() {
+            let addr = finishers.get(i).unwrap();
+            token_client.transfer(&env.current_contract_address(), &addr, &payout);
         }
 
         cohort.finalized = true;
         env.storage().persistent().set(&DataKey::Cohort(cohort_id), &cohort);
 
-        CohortFinalized { cohort_id, payout_per_finisher: payout }.publish(&env);
+        env.events().publish(
+            (symbol_short!("final"), cohort_id),
+            payout,
+        );
         Ok(())
     }
 

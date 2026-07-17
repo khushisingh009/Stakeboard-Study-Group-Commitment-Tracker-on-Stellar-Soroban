@@ -51,5 +51,29 @@ export function useWallet() {
     return signedTxXdr;
   }, [address]);
 
-  return { address, connecting, error, connect, disconnect, signTransaction, isConnected: !!address };
+  const [balance, setBalance] = useState(null);
+
+  const fetchBalance = useCallback(async () => {
+    if (!address) {
+      setBalance(null);
+      return;
+    }
+    try {
+      const { tokenClient } = await import('../contracts/cohortClient');
+      const bal = await tokenClient.balance(address, address);
+      if (bal !== null) {
+        setBalance((Number(bal) / 10000000).toFixed(2));
+      }
+    } catch (err) {
+      console.error('Failed to fetch balance', err);
+    }
+  }, [address]);
+
+  useEffect(() => {
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 10000); // Poll every 10s
+    return () => clearInterval(interval);
+  }, [fetchBalance]);
+
+  return { address, balance, connecting, error, connect, disconnect, signTransaction, isConnected: !!address, fetchBalance };
 }
