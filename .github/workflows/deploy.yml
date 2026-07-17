@@ -1,0 +1,77 @@
+name: Deploy Contracts to Testnet
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  deploy:
+    name: Deploy to Testnet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo registry and binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: ${{ runner.os }}-cargo-deploy-${{ hashFiles('**/Cargo.lock') }}
+
+      # 1. Install cargo-binstall for instant installations (3s vs 11 min from source)
+      - name: Install cargo-binstall
+        run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+      # 2. Instantly install the latest stellar-cli via pre-compiled binary
+      - name: Install Stellar CLI
+        run: cargo binstall --no-confirm stellar-cli
+
+      # 3. Build using standard cargo (avoids wasm32v1-none errors from stellar contract build)
+      #    then optimize each contract to fit within Stellar network size limits
+      - name: Build and optimize contracts
+        run: |
+          cargo build --target wasm32-unknown-unknown --release
+          stellar contract optimize --wasm target/wasm32-unknown-unknown/release/attendance_log.wasm
+          stellar contract optimize --wasm target/wasm32-unknown-unknown/release/study_cohort.wasm
+
+      - name: Deploy to Testnet
+        run: |
+          echo "Generating deployer identity..."
+          stellar keys generate deployer --network testnet
+          stellar keys fund deployer --network testnet
+
+          echo "Deploying Attendance Log Contract..."
+          ATTENDANCE_ID=$(stellar contract deploy \
+            --wasm target/wasm32-unknown-unknown/release/attendance_log.optimized.wasm \
+            --source deployer \
+            --network testnet 2>deploy_err.log) || { cat deploy_err.log; exit 1; }
+          echo "Attendance Log Contract deployed at: $ATTENDANCE_ID"
+
+          echo "Deploying Study Cohort Contract..."
+          COHORT_ID=$(stellar contract deploy \
+            --wasm target/wasm32-unknown-unknown/release/study_cohort.optimized.wasm \
+            --source deployer \
+            --network testnet 2>deploy_err.log) || { cat deploy_err.log; exit 1; }
+          echo "Study Cohort Contract deployed at: $COHORT_ID"
+
+          echo "Fetching Native XLM Token ID..."
+          TOKEN_ID=$(stellar contract id asset --asset native --network testnet)
+          echo "Native Token ID: $TOKEN_ID"
+
+          echo "=================================================="
+          echo " Deployment complete! Paste these into your .env:"
+          echo "=================================================="
+          echo " VITE_ATTENDANCE_CONTRACT_ID=$ATTENDANCE_ID"
+          echo " VITE_COHORT_CONTRACT_ID=$COHORT_ID"
+          echo " VITE_NATIVE_TOKEN_ID=$TOKEN_ID"
+          echo "=================================================="
