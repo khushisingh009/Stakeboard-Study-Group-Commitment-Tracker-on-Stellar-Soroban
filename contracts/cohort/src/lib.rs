@@ -14,7 +14,7 @@ use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_sh
 
 mod attendance {
     soroban_sdk::contractimport!(
-        file = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target/wasm32-unknown-unknown/release/attendance_log.wasm")
+        file = "../../target/wasm32-unknown-unknown/release/attendance_log.wasm"
     );
 }
 
