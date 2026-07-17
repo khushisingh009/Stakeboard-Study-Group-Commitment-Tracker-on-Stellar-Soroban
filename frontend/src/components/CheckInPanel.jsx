@@ -8,7 +8,7 @@ export default function CheckInPanel({ onCheckIn, loading }) {
 
   return (
     <div className="card p-5 sm:p-6 space-y-4">
-      <h3 className="font-display text-lg font-semibold text-chalk">Check in for today's session</h3>
+      <h3 className="font-display text-lg font-semibold text-chalk">Check in for today&apos;s session</h3>
       <p className="text-xs text-chalk/50">
         Check in during the session window. The organizer closes each session afterward, which reads your
         check-in on-chain before deciding who stays active.

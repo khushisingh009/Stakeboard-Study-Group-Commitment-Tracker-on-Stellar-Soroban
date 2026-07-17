@@ -21,7 +21,6 @@ export default function SyllabusBoard({ cohort, onCloseMilestone, onFinalize, ac
     );
   }
 
-  const progress = cohort.milestones_closed / cohort.milestone_count;
   const allClosed = cohort.milestones_closed >= cohort.milestone_count;
 
   return (
