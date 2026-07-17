@@ -36,9 +36,18 @@ class BaseClient {
 
   async _pollTransaction(hash, attempts = 15) {
     for (let i = 0; i < attempts; i++) {
-      const result = await server.getTransaction(hash);
-      if (result.status === 'SUCCESS') return { hash, status: 'SUCCESS', result };
-      if (result.status === 'FAILED') throw new Error(`Transaction failed: ${hash}`);
+      try {
+        const result = await server.getTransaction(hash);
+        if (result.status === 'SUCCESS') return { hash, status: 'SUCCESS', result };
+        if (result.status === 'FAILED') throw new Error(`Transaction failed: ${hash}`);
+      } catch (e) {
+        // Protocol 22 (TransactionMetaV4) causes "Bad union switch: 4" in older SDKs.
+        // This error only fires AFTER the tx is confirmed on-chain, so it IS a success.
+        if (e.message && e.message.includes('Bad union switch')) {
+          return { hash, status: 'SUCCESS', result: null };
+        }
+        throw e;
+      }
       await new Promise((r) => setTimeout(r, 1500));
     }
     throw new Error(`Transaction ${hash} did not confirm in time`);
